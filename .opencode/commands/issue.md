@@ -8,15 +8,13 @@ $ARGUMENTS
 
 Sigue este procedimiento:
 
-Analiza $ARGUMENTS y determina un título corto y descriptivo para el issue.
-Comprueba que estamos dentro de un repositorio Git.
-Comprueba que GitHub CLI (gh) está instalado y autenticado.
-Comprueba el estado actual de Git con git status.
-No elimines ni sobrescribas cambios locales existentes.
-Crea el issue en GitHub utilizando gh issue create.
-Obtén el número del issue creado.
-
-Genera un nombre de rama siguiendo este formato:
+1) Analiza $ARGUMENTS y determina un título corto y descriptivo para el issue.
+2) Comprueba que estamos dentro de un repositorio Git.
+3) Comprueba que GitHub CLI (gh) está instalado y autenticado.
+4) Comprueba el estado actual de Git con git status.
+5) No elimines ni sobrescribas cambios locales existentes.
+6) Crea el issue en GitHub utilizando gh issue create.
+7) Obtén el número del issue creado. Dicho issue crea una rama nueva asociada a ese issue, con el siguiente formato:
 
 feature/<numero>-<descripcion-en-kebab-case>
 
@@ -24,15 +22,16 @@ Si el issue corresponde claramente a un bug, utiliza:
 
 bugfix/<numero>-<descripcion-en-kebab-case>
 
-Crea la rama y cambia a ella utilizando:
+
+8) Cambia a la nueva rama utilizando:
 
 git switch -c <nombre-rama>
 
-Al finalizar, muestra:
-número del issue
-título del issue
+9) Al finalizar, muestra:
+Número del issue
+Título del issue
 URL del issue
-nombre de la rama
-rama actual
+Nombre de la rama asociada al issue
+Rama actual
 
 No hagas commit, push ni cierres el issue.
