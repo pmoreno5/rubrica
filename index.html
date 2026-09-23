@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generador de rúbricas de evaluación</title>
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --card: #ffffff;
+      --border: #d9dce1;
+      --text: #1f2430;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    main { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+    p.subtitle { color: var(--muted); margin: 0 0 1.5rem; }
+    h2 {
+      font-size: 1.05rem;
+      margin: 1.75rem 0 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+    section.card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-bottom: 0.9rem;
+    }
+    .field-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .field-row .field { flex: 1 1 14rem; }
+    label { font-size: 0.85rem; color: var(--muted); }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: #fff;
+    }
+    input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    button {
+      padding: 0.6rem 1.1rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff;
+    }
+    button:hover { background: var(--accent-dark); }
+    button.secondary {
+      background: #eef0f3;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button.secondary:hover { background: #e2e5ea; }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem; }
+    .level-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem;
+      margin-bottom: 0.8rem;
+    }
+    .level-block h3 { margin: 0 0 0.6rem; font-size: 0.9rem; color: var(--text); }
+    .criterion-block {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem;
+      margin-bottom: 1rem;
+      background: #fcfcfd;
+    }
+    .criterion-block h3 { margin: 0 0 0.6rem; font-size: 0.9rem; }
+    .crit-levels { margin-top: 0.8rem; }
+    .crit-levels label.sub { font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 0.7rem; }
+    .error { color: var(--danger); font-size: 0.85rem; margin-top: 0.6rem; }
+    .actions { display: flex; gap: 0.7rem; flex-wrap: wrap; align-items: center; margin-top: 1.25rem; }
+    details.preview { margin-top: 1.25rem; }
+    details.preview summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; }
+    pre {
+      background: #14161c;
+      color: #d7d9e0;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Generador de rúbricas de evaluación</h1>
+    <p class="subtitle">Configura la estructura, rellena criterios y niveles y descarga la rúbrica como archivo Markdown.</p>
+
+    <section class="card" id="configSection">
+      <h2>1. Estructura</h2>
+      <div class="field-row">
+        <div class="field">
+          <label for="rubricTitle">Título de la rúbrica</label>
+          <input type="text" id="rubricTitle" value="Rúbrica de evaluación">
+        </div>
+        <div class="field">
+          <label for="criteriaCount">Número de criterios (3–8)</label>
+          <input type="number" id="criteriaCount" min="3" max="8" value="4">
+        </div>
+        <div class="field">
+          <label for="levelCount">Número de niveles (3–5)</label>
+          <input type="number" id="levelCount" min="3" max="5" value="4">
+        </div>
+      </div>
+      <div class="field">
+        <label>
+          <input type="checkbox" id="includeWeight" checked>
+          Incluir columna Peso (%) por criterio
+        </label>
+      </div>
+      <button type="button" id="buildBtn">Generar formulario</button>
+    </section>
+
+    <section class="card" id="editSection" hidden>
+      <h2>2. Niveles de desempeño</h2>
+      <div id="levelsConfig"></div>
+
+      <h2>3. Criterios de evaluación</h2>
+      <p class="subtitle">Para cada criterio indica el título, qué se evalúa y la descripción de cada nivel de desempeño.</p>
+      <div id="criteriaConfig"></div>
+
+      <div class="actions">
+        <button type="button" id="generateBtn">Generar y descargar el .md</button>
+        <button type="button" id="resetBtn" class="secondary">Rehacer formulario</button>
+        <span class="hint" id="status"></span>
+      </div>
+      <p class="error" id="errorMsg" hidden></p>
+
+      <details class="preview">
+        <summary>Vista previa del Markdown</summary>
+        <pre id="preview"></pre>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    const MIN_CRITERIA = 3;
+    const MAX_CRITERIA = 8;
+    const MIN_LEVELS = 3;
+    const MAX_LEVELS = 5;
+
+    const rubricTitleInput = document.getElementById('rubricTitle');
+    const criteriaCountInput = document.getElementById('criteriaCount');
+    const levelCountInput = document.getElementById('levelCount');
+    const includeWeightInput = document.getElementById('includeWeight');
+    const buildBtn = document.getElementById('buildBtn');
+    const editSection = document.getElementById('editSection');
+    const configSection = document.getElementById('configSection');
+    const levelsConfig = document.getElementById('levelsConfig');
+    const criteriaConfig = document.getElementById('criteriaConfig');
+    const generateBtn = document.getElementById('generateBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const statusEl = document.getElementById('status');
+    const errorMsgEl = document.getElementById('errorMsg');
+    const previewEl = document.getElementById('preview');
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function defaultLevelScores(levelCount) {
+      const scores = [];
+      let lower = 0;
+      for (let i = 0; i < levelCount; i++) {
+        const upper = Math.round((100 * (i + 1)) / levelCount);
+        scores.push(lower + '–' + upper);
+        lower = upper + 1;
+      }
+      return scores;
+    }
+
+    function createInput(type, placeholder, value) {
+      const input = document.createElement('input');
+      input.type = type;
+      input.placeholder = placeholder;
+      if (value !== undefined && value !== null && value !== '') {
+        input.value = value;
+      }
+      return input;
+    }
+
+    function buildForm() {
+      const criteriaCount = clamp(parseInt(criteriaCountInput.value, 10) || MIN_CRITERIA, MIN_CRITERIA, MAX_CRITERIA);
+      const levelCount = clamp(parseInt(levelCountInput.value, 10) || MIN_LEVELS, MIN_LEVELS, MAX_LEVELS);
+      const withWeight = includeWeightInput.checked;
+
+      levelsConfig.innerHTML = '';
+      criteriaConfig.innerHTML = '';
+      errorMsgEl.hidden = true;
+      previewEl.textContent = '';
+
+      const scores = defaultLevelScores(levelCount);
+      for (let i = 0; i < levelCount; i++) {
+        const block = document.createElement('div');
+        block.className = 'level-block';
+        const heading = document.createElement('h3');
+        heading.textContent = 'Nivel ' + (i + 1);
+        const nameField = document.createElement('div');
+        nameField.className = 'field';
+        const nameLabel = document.createElement('label');
+        nameLabel.textContent = 'Nombre del nivel';
+        const nameInput = createInput('text', 'Nivel ' + (i + 1));
+        nameField.appendChild(nameLabel);
+        nameField.appendChild(nameInput);
+        const scoreField = document.createElement('div');
+        scoreField.className = 'field';
+        const scoreLabel = document.createElement('label');
+        scoreLabel.textContent = 'Puntuación / rango (p. ej. 0–25)';
+        const scoreInput = createInput('text', '0–25', scores[i]);
+        scoreField.appendChild(scoreLabel);
+        scoreField.appendChild(scoreInput);
+        block.appendChild(heading);
+        block.appendChild(nameField);
+        block.appendChild(scoreField);
+        levelsConfig.appendChild(block);
+      }
+
+      for (let j = 0; j < criteriaCount; j++) {
+        const block = document.createElement('div');
+        block.className = 'criterion-block';
+        const heading = document.createElement('h3');
+        heading.textContent = 'Criterio ' + (j + 1);
+        const nameField = document.createElement('div');
+        nameField.className = 'field';
+        const nameLabel = document.createElement('label');
+        nameLabel.textContent = 'Título del criterio';
+        const nameInput = createInput('text', 'Criterio ' + (j + 1));
+        nameField.appendChild(nameLabel);
+        nameField.appendChild(nameInput);
+        const descField = document.createElement('div');
+        descField.className = 'field';
+        const descLabel = document.createElement('label');
+        descLabel.textContent = 'Descripción (qué se evalúa)';
+        const descInput = createInput('text', 'Describe qué se evalúa en este criterio');
+        descField.appendChild(descLabel);
+        descField.appendChild(descInput);
+        block.appendChild(heading);
+        block.appendChild(nameField);
+        block.appendChild(descField);
+
+        if (withWeight) {
+          const weightField = document.createElement('div');
+          weightField.className = 'field';
+          const weightLabel = document.createElement('label');
+          weightLabel.textContent = 'Peso (%)';
+          const weightInput = createInput('number', '0–100', Math.round(100 / criteriaCount));
+          weightInput.min = 0;
+          weightInput.max = 100;
+          weightField.appendChild(weightLabel);
+          weightField.appendChild(weightInput);
+          block.appendChild(weightField);
+        }
+
+        const levelsDiv = document.createElement('div');
+        levelsDiv.className = 'crit-levels';
+        const sub = document.createElement('label');
+        sub.textContent = 'Descripción de cada nivel para este criterio';
+        levelsDiv.appendChild(sub);
+        for (let i = 0; i < levelCount; i++) {
+          const field = document.createElement('div');
+          field.className = 'field';
+          const levelLabel = document.createElement('label');
+          levelLabel.textContent = 'Nivel ' + (i + 1);
+          const cellInput = createInput('text', 'Desempeño esperado en el nivel ' + (i + 1));
+          field.appendChild(levelLabel);
+          field.appendChild(cellInput);
+          levelsDiv.appendChild(field);
+        }
+        block.appendChild(levelsDiv);
+        criteriaConfig.appendChild(block);
+      }
+
+      editSection.hidden = false;
+      configSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function escapeCell(value) {
+      return String(value).replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>').trim();
+    }
+
+    function collectData() {
+      const levels = Array.from(levelsConfig.querySelectorAll('.level-block')).map((block) => {
+        const inputs = block.querySelectorAll('input[type=text]');
+        return { title: inputs[0].value.trim(), score: inputs[1].value.trim() };
+      });
+
+      const withWeight = includeWeightInput.checked;
+      const criteria = Array.from(criteriaConfig.querySelectorAll('.criterion-block')).map((block) => {
+        const nameInput = block.querySelector(':scope > .field input[type=text]');
+        const descInput = nameInput ? nameInput.parentElement.nextElementSibling.querySelector('input[type=text]') : null;
+        const weightInput = block.querySelector(':scope > .field input[type=number]');
+        const cellInputs = block.querySelectorAll('.crit-levels .field input[type=text]');
+        return {
+          name: nameInput ? nameInput.value : '',
+          desc: descInput ? descInput.value : '',
+          weight: weightInput ? weightInput.value : '',
+          cells: Array.from(cellInputs).map((input) => input.value)
+        };
+      });
+
+      return { title: rubricTitleInput.value.trim(), levels, criteria, withWeight };
+    }
+
+    function buildMarkdown(data) {
+      const lines = [];
+      if (data.title) {
+        lines.push('# ' + data.title);
+        lines.push('');
+      }
+
+      const headers = ['Criterio', 'Descripción'];
+      data.levels.forEach((level, i) => {
+        const name = level.title || 'Nivel ' + (i + 1);
+        headers.push(level.score ? name + ' (' + level.score + ')' : name);
+      });
+      if (data.withWeight) {
+        headers.push('Peso (%)');
+      }
+
+      const separators = ['---', '---'];
+      data.levels.forEach(() => separators.push('---:'));
+      if (data.withWeight) {
+        separators.push('---:');
+      }
+
+      lines.push('| ' + headers.join(' | ') + ' |');
+      lines.push('| ' + separators.join(' | ') + ' |');
+
+      data.criteria.forEach((criterion) => {
+        const cells = [criterion.name, criterion.desc];
+        data.levels.forEach((_, i) => {
+          cells.push(criterion.cells[i] || '');
+        });
+        if (data.withWeight) {
+          cells.push(criterion.weight || '');
+        }
+        lines.push('| ' + cells.map(escapeCell).join(' | ') + ' |');
+      });
+
+      return lines.join('\n');
+    }
+
+    function kebabCase(value) {
+      const cleaned = value
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      return cleaned || 'rubrica';
+    }
+
+    function downloadMarkdown() {
+      let data;
+      try {
+        data = collectData();
+      } catch (err) {
+        errorMsgEl.textContent = 'No se ha podido leer el formulario.';
+        errorMsgEl.hidden = false;
+        return;
+      }
+      const markdown = buildMarkdown(data);
+      previewEl.textContent = markdown;
+
+      const completedCriteria = data.criteria.filter((c) => c.name.trim() && c.desc.trim());
+      const completedLevels = data.levels.filter((l) => l.title.trim()).length;
+      const levelCount = data.levels.length;
+      const statusParts = [];
+      if (completedCriteria.length === data.criteria.length) {
+        statusParts.push(completedCriteria.length + '/' + data.criteria.length + ' criterios completos');
+      } else {
+        statusParts.push('faltan criterios por completar');
+      }
+      if (completedLevels === 0) {
+        statusParts.push('niveles con nombre por defecto');
+      }
+      statusEl.textContent = statusParts.join(' · ');
+
+      const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = kebabCase(data.title) + '.md';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    buildBtn.addEventListener('click', buildForm);
+    resetBtn.addEventListener('click', () => {
+      editSection.hidden = true;
+      levelsConfig.innerHTML = '';
+      criteriaConfig.innerHTML = '';
+      statusEl.textContent = '';
+      previewEl.textContent = '';
+      configSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    generateBtn.addEventListener('click', downloadMarkdown);
+  </script>
+</body>
+</html>
